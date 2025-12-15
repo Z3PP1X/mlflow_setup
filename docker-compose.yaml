@@ -1,0 +1,109 @@
+version: "3.7"
+services:
+
+  # PostgreSQL database
+  postgres:
+    image: postgres:latest
+    container_name: mlflow-postgres # Name leicht angepasst zur besseren Unterscheidung
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: mlflowdb
+    # Host-Port 6432 mapped auf internen Standard-Port 5432
+    ports:
+      - 6432:5432
+    networks:
+      - mlflowNetwork
+    # Volumen für persistente Daten
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data # /data ist oft der Standardpfad
+    restart: unless-stopped # Wichtig für automatischen Neustart
+
+  # MinIO server (S3-kompatibler Artefakt-Speicher)
+  minio:
+    image: minio/minio
+    container_name: mlflow-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: "minio_user"
+      MINIO_ROOT_PASSWORD: "minio_password"
+    networks:
+      - mlflowNetwork
+    # Volumen für persistente Artefakte
+    volumes: 
+      - ./minio-data:/data 
+    healthcheck:
+      # Verbessertes Healthcheck-Kommando
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+
+  # Service zum Erstellen des MinIO-Buckets
+  minio-create-bucket:
+    image: minio/mc
+    container_name: mlflow-create-bucket
+    depends_on:
+      minio:
+        condition: service_healthy
+    networks:
+      - mlflowNetwork
+    # Entrypoint zum Erstellen des "bucket"
+    entrypoint: >
+      /bin/bash -c "
+      mc alias set minio http://minio:9000 minio_user minio_password &&
+      if ! mc ls minio/bucket/ >/dev/null 2>&1; then
+        echo 'Erstelle bucket...'
+        mc mb minio/bucket
+      else
+        echo 'bucket existiert bereits'
+      fi
+      "
+
+  # MLflow Tracking Server
+  mlflow:
+    build:
+      context: ./mlflow
+      dockerfile: Dockerfile
+    container_name: mlflow-server
+    
+    ports:
+      - "7500:7500"
+    
+    environment:
+      # Tracking Store (Postgres intern: postgres:5432)
+      MLFLOW_TRACKING_URI: postgresql://user:password@postgres:5432/mlflowdb
+      # MinIO Endpoint (S3 Kompatibilität)
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      # MinIO Zugangsdaten
+      AWS_ACCESS_KEY_ID: minio_user
+      AWS_SECRET_ACCESS_KEY: minio_password
+      # Standard-Artefakt-Speicherort
+      MLFLOW_S3_ARTIFACT_ROOT: s3://bucket/
+
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 7500
+      --backend-store-uri ${MLFLOW_TRACKING_URI}
+      --default-artifact-root ${MLFLOW_S3_ARTIFACT_ROOT}
+      
+    networks:
+      - mlflowNetwork
+    
+    depends_on:
+      postgres:
+        condition: service_started
+      minio-create-bucket:
+        condition: service_completed_successfully
+        
+    restart: unless-stopped
+
+
+networks:
+  mlflowNetwork:
+    driver: bridge
