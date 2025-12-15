@@ -70,20 +70,23 @@ services:
       context: ./mlflow
       dockerfile: Dockerfile
     container_name: mlflow-server
+
+    env_file:
+      - ./mlflow.env
     
     ports:
       - "7500:7500"
     
     environment:
       # Tracking Store (Postgres intern: postgres:5432)
-      MLFLOW_TRACKING_URI: postgresql://user:password@postgres:5432/mlflowdb
+      - MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
       # MinIO Endpoint (S3 Kompatibilität)
-      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      - MLFLOW_S3_ENDPOINT_URL=${MLFLOW_S3_ENDPOINT_URL} # <-- Jetzt mit Bindestrich
       # MinIO Zugangsdaten
-      AWS_ACCESS_KEY_ID: minio_user
-      AWS_SECRET_ACCESS_KEY: minio_password
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       # Standard-Artefakt-Speicherort
-      MLFLOW_S3_ARTIFACT_ROOT: s3://bucket/
+      - MLFLOW_S3_ARTIFACT_ROOT=${MLFLOW_S3_ARTIFACT_ROOT}
 
     command: >
       mlflow server
