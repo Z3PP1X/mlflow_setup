@@ -16,7 +16,7 @@ services:
       - mlflowNetwork
 
     volumes:
-      - ./postgres-data:/var/lib/postgresql/data
+      - ./postgres-data:/var/lib/postgresql
     restart: unless-stopped 
 
   # MinIO server (S3-kompatibler Artefakt-Speicher)
