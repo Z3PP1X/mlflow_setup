@@ -93,14 +93,15 @@ services:
       # Standard-Artefakt-Speicherort
       - MLFLOW_S3_ARTIFACT_ROOT=${MLFLOW_S3_ARTIFACT_ROOT}
 
-    command: >
-      mlflow server
-      --host 0.0.0.0
-      --port 7500
-      --backend-store-uri ${MLFLOW_TRACKING_URI}
-      --default-artifact-root ${MLFLOW_S3_ARTIFACT_ROOT}
-      --allowed-hosts=localhost, 127.0.0.1,188.245.122.223,pcf-dev-test.de, mlflow
-      --cors-allowed-origins *
+    command: [
+      "mlflow", "server",
+      "--host", "0.0.0.0",
+      "--port", "7500",
+      "--backend-store-uri", "${MLFLOW_TRACKING_URI}",
+      "--default-artifact-root", "${MLFLOW_S3_ARTIFACT_ROOT}",
+      "--allowed-hosts", "localhost,127.0.0.1,188.245.122.223,pcf-dev-test.de,mlflow",
+      "--cors-allowed-origins", "*"
+    ]
       
     networks:
       - mlflowNetwork
