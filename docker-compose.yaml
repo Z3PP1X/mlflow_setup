@@ -25,7 +25,7 @@ services:
     image: minio/minio
     container_name: mlflow-minio
     env_file:
-      - ./mlflow.env
+      - ./.env
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -77,7 +77,7 @@ services:
     container_name: mlflow-server
 
     env_file:
-      - ./mlflow.env
+      - ./.env
     
     ports:
       - "7500:7500"
