@@ -95,6 +95,7 @@ services:
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       # Standard-Artefakt-Speicherort
       - MLFLOW_S3_ARTIFACT_ROOT=${MLFLOW_S3_ARTIFACT_ROOT}
+      - MLFLOW_S3_IGNORE_TLS=true
 
     command: [
       "mlflow", "server",
